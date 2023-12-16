@@ -19,7 +19,6 @@
 //...
 //...
 
-
 //Funcao para verificacao se o sistema de arquivos está ocioso, ou seja,
 //se nao ha quisquer descritores de arquivos em uso atualmente. Retorna
 //um positivo se ocioso ou, caso contrario, 0.
@@ -39,7 +38,7 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
 //em path, no disco montado especificado em d, no modo Read/Write,
 //criando o arquivo se nao existir. Retorna um descritor de arquivo,
 //em caso de sucesso. Retorna -1, caso contrario.
-int myFSOpen (Disk *d, const char *path) {
+int myFSOpen (Disk *d, const char *path) {	
 	return -1;
 }
 	
@@ -110,19 +109,22 @@ int myFSCloseDir (int fd) {
 //ao virtual FS (vfs). Retorna um identificador unico (slot), caso
 //o sistema de arquivos tenha sido registrado com sucesso.
 //Caso contrario, retorna -1
-int installMyFS (void) {
-	FSInfo fs = {23,"Trabalho_SO"};
-	fs.isidleFn = myFSIsIdle;
-	fs.formatFn = myFSFormat;
-	fs.openFn = myFSOpen;
-	fs.readFn = myFSRead;
-	fs.writeFn = myFSWrite;
-	fs.closeFn = myFSClose;
-	fs.opendirFn = myFSOpenDir;
-	fs.readdirFn = myFSReadDir;
-	fs.linkFn = myFSLink;
-	fs.unlinkFn = myFSUnlink;
-	fs.closedirFn = myFSCloseDir;
-	fs.vfsRegisterFS(fs.fsname);
+int installMyFS (void) {	
+    FSInfo *fs = malloc(sizeof(FSInfo));
+	fs->fsid = '1';
+	fs->fsname = "Trabalho_SO";
+	fs->isidleFn = myFSIsIdle;
+	fs->formatFn = myFSFormat;
+	fs->openFn = myFSOpen;
+	fs->readFn = myFSRead;
+	fs->writeFn = myFSWrite;
+	fs->closeFn = myFSClose;
+	fs->opendirFn = myFSOpenDir;
+	fs->readdirFn = myFSReadDir;
+	fs->linkFn = myFSLink;
+	fs->unlinkFn = myFSUnlink;
+	fs->closedirFn = myFSCloseDir;
+	vfsInit();
+	vfsRegisterFS(fs);
 	return -1;
 }
