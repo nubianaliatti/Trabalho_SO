@@ -82,6 +82,7 @@ int myFSOpen (Disk *d, const char *path) {
 			return -1;
 	
 		a->inode = inode;
+		a->disk = d;
 		a->fd = inodeGetNumber(inode);
 		arquivos[a->fd - 1] = a;
 		return a->fd;
