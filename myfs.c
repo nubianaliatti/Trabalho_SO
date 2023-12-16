@@ -31,7 +31,10 @@ int myFSIsIdle (Disk *d) {
 //blocos disponiveis no disco, se formatado com sucesso. Caso contrario,
 //retorna -1.
 int myFSFormat (Disk *d, unsigned int blockSize) {
-	return -1;
+	for(int i = 1; i <= (blockSize/DISK_SECTORDATASIZE)*8; i ++){
+		inodeSave(inodeCreate(i,d));
+	}
+	return 0;
 }
 
 //Funcao para abertura de um arquivo, a partir do caminho especificado
@@ -55,6 +58,7 @@ int myFSRead (int fd, char *buf, unsigned int nbytes) {
 //terao tamanho maximo de nbytes. Retorna o numero de bytes
 //efetivamente escritos em caso de sucesso ou -1, caso contrario
 int myFSWrite (int fd, const char *buf, unsigned int nbytes) {
+	
 	return -1;
 }
 
