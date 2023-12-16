@@ -9,6 +9,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "myfs.h"
 #include "vfs.h"
@@ -18,12 +19,28 @@
 //Declaracoes globais
 //...
 //...
+typedef struct
+{
+	int fd;
+	Inode *inode;
+	//int blocksize;
+	//int lastByteRead;
+	const char *path;
+	Disk *disk;
+} Arquivo;
+
+Arquivo *arquivos [MAX_FDS] = {NULL};
 
 //Funcao para verificacao se o sistema de arquivos está ocioso, ou seja,
 //se nao ha quisquer descritores de arquivos em uso atualmente. Retorna
 //um positivo se ocioso ou, caso contrario, 0.
 int myFSIsIdle (Disk *d) {
-	return 0;
+
+	for (int i = 0; i < MAX_FDS; i++){
+		if (arquivos[i] != NULL)
+			return 0;
+	}
+	return 1;
 }
 
 //Funcao para formatacao de um disco com o novo sistema de arquivos
@@ -31,7 +48,7 @@ int myFSIsIdle (Disk *d) {
 //blocos disponiveis no disco, se formatado com sucesso. Caso contrario,
 //retorna -1.
 int myFSFormat (Disk *d, unsigned int blockSize) {
-	for(int i = 1; i <= (blockSize/DISK_SECTORDATASIZE)*8; i ++){
+	for(int i = 1; i <= (blockSize/DISK_SECTORDATASIZE)*3; i ++){
 		inodeSave(inodeCreate(i,d));
 	}
 	return 0;
@@ -41,8 +58,36 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
 //em path, no disco montado especificado em d, no modo Read/Write,
 //criando o arquivo se nao existir. Retorna um descritor de arquivo,
 //em caso de sucesso. Retorna -1, caso contrario.
-int myFSOpen (Disk *d, const char *path) {	
+int myFSOpen (Disk *d, const char *path) {
+
+	Arquivo *a = NULL;
+	for (int i = 0; i < MAX_FDS; i++){
+		if (arquivos[i] != NULL && strcmp(arquivos[i]->path, path) == 0)
+		   a = arquivos[i];
+	}
+	if (a == NULL){
+		a = malloc(sizeof(Arquivo));
+		a->path = path;
+		Inode *inode = NULL;
+		int num = -1;
+		for (int i = 0; i < MAX_FDS; i++){
+			if (arquivos[i] == NULL){
+				num = inodeFindFreeInode(1, d);
+				inode = inodeCreate(num, d);
+				break;
+			}
+		}
+
+		if (num == -1)
+			return -1;
+	
+		a->inode = inode;
+		a->fd = inodeGetNumber(inode);
+		arquivos[a->fd - 1] = a;
+		return a->fd;
+	}
 	return -1;
+
 }
 	
 //Funcao para a leitura de um arquivo, a partir de um descritor de
@@ -65,6 +110,16 @@ int myFSWrite (int fd, const char *buf, unsigned int nbytes) {
 //Funcao para fechar um arquivo, a partir de um descritor de arquivo
 //existente. Retorna 0 caso bem sucedido, ou -1 caso contrario
 int myFSClose (int fd) {
+	if (fd > 0 || fd <= MAX_FDS){
+
+		Arquivo *a = arquivos[fd];
+
+		arquivos[fd - 1] = NULL;
+		free(a->inode);
+		free(a);
+
+		return 0;
+	}
 	return -1;
 }
 
