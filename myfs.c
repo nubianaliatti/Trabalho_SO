@@ -1,7 +1,10 @@
 /*
 *  myfs.c - Implementacao do sistema de arquivos MyFS
 *
-*  Autores: SUPER_PROGRAMADORES_C
+*  Autores: Gabriel Maciel Furlong - 201965204AB
+            Pablo Mendes Gal de Castro - 202076013
+            henrique barral - 202035029
+            Nubia Ribeiro Naliatti - 202035007
 *  Projeto: Trabalho Pratico II - Sistemas Operacionais
 *  Organizacao: Universidade Federal de Juiz de Fora
 *  Departamento: Dep. Ciencia da Computacao
@@ -63,11 +66,11 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
 
     //printa o trecho de inodes criados
     //O +1 existe porque começa no setor 0 
-    printf("\nInode criado de %u a %u \n", inodeAreaBeginSector()+1, (numeroInode + inodeAreaBeginSector()));
+    printf("\nInode criado de %u a %u \n", inodeAreaBeginSector(), (numeroInode + inodeAreaBeginSector()));
 
 	// Define o primeiro setor disponivel para criar o Inode
     // Que consiste no BlockSize in inserido pelo usuário + os setores offset 
-    unsigned int primeiroDisponivel = inodeAreaBeginSector() + numeroInode+1;
+    unsigned int primeiroDisponivel = inodeAreaBeginSector() + numeroInode;
 
 	// Auxiliar para contar a quantidade de blocos livres:
     unsigned long blocosLivres = 0;
