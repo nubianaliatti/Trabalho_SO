@@ -52,18 +52,21 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
 
     //Define a quantidade de setores a serem criados inodes 
     unsigned int numeroInode = blockSize/512;  
-    
+    int offset = inodeAreaBeginSector();
+    int localInode = numeroInode + offset;
     //Cria inodes
-    for (unsigned int i = 0; i <= numeroInode; ++i) {
+    for (unsigned int i = offset; i <= localInode; ++i) {
 		// Cria inode apos o inicial
         Inode *inode = inodeCreate(i+1, d);
         inodeSave(inode);
     }
 
     //printa o trecho de inodes criados
+    //O +1 existe porque começa no setor 0 
     printf("\nInode criado de %u a %u \n", inodeAreaBeginSector()+1, (numeroInode + inodeAreaBeginSector()));
 
-	// Define o primeiro setor disponivel
+	// Define o primeiro setor disponivel para criar o Inode
+    // Que consiste no BlockSize in inserido pelo usuário + os setores offset 
     unsigned int primeiroDisponivel = inodeAreaBeginSector() + numeroInode+1;
 
 	// Auxiliar para contar a quantidade de blocos livres:
@@ -71,6 +74,7 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
 
     //Função para calcular  a quantidade de blocos livres 
     //definidas pelo grupo para serem uasadas na formatação 
+    // igual a 4x a quantidade de Inodes criada 
     int qtdeBlocos = (4*blockSize)/512;
 
     //Variavel auxiliar para pegar a quantidade de setores a serem formatados 
@@ -85,12 +89,12 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
         if (diskWriteSector(d, i, formata) != 0) {
             return -1; 
         }
-		blocosLivres++;
+		blocosLivres++; 
     }
 
 	
 
-	// Define o primeiro Inode como a raiz
+	// Define o primeiro Inode após o offset como a raiz
 	unsigned int numeroRaiz = inodeFindFreeInode(inodeAreaBeginSector(), d);
 
     // Carregar o i-node do diretório raiz
@@ -188,6 +192,8 @@ static MyFSData myFSData;
 
 
 int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
+
+    //Verifica se possui erros 
     if (fd <= 0 || fd > MAX_FDS || arquivos[fd - 1] == NULL) {
         return -1; 
     }
@@ -197,16 +203,23 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
     Disk *d = arquivo->disk;
     unsigned int blocksize = arquivo->blocksize;
 
+    //Verifica se o last byte read é maior que 0
+    //Retorna ele para zero para percorrer do inicio 
     if (arquivo->lastByteRead < 0) {
         arquivo->lastByteRead = 0;
     }
-    
-    int currentBlock = arquivo->lastByteRead / blocksize;
-    int startBlock = arquivo->lastByteRead % blocksize == 0 ? currentBlock : currentBlock + 1;
-    
+
+    //define em qual setor vai ser escrito      
+     int currentBlock = arquivo->lastByteRead / blocksize;
+     int startBlock = arquivo->lastByteRead % blocksize == 0 ? currentBlock : currentBlock + 1;
+
+    //pega o número do Inode
     int inodeNumber = inodeGetNumber(inode);
-    
+
+    //variavel auxiliar para registrar a quantidade de bits lidos 
     int bytesWritten = 0;
+
+    //Pega o endereço do bloco de Inodes
     for (int block = startBlock; block <= currentBlock + nbytes / blocksize; ++block) {
         
         unsigned int blockAddr = inodeGetBlockAddr(inode, block);
@@ -218,9 +231,10 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
                 return -1;
             }
         }
-
+        //define a quantidade de bytes offset utilizados 
         int offset = inodeAreaBeginSector();
         
+        //Le o setor para verificar se possui alguma variável diferente de zero 
         unsigned char blockData[blocksize];
         if (diskReadSector(d, blockAddr, blockData) != 0) {
             
@@ -231,7 +245,8 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
             blockData[i] = buf[bytesWritten++];
             arquivo->lastByteRead++;
         }
-        
+        //realiza a escrita dos byttes enquanto o byte não for 
+        //difente de 0 ou seja encerra caso já tenha algo escrito 
         if (diskWriteSector(d, blockAddr, blockData) != 0) {
             return -1;
         }
