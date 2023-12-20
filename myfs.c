@@ -168,30 +168,6 @@ int myFSRead (int fd, char *buf, unsigned int nbytes) {
 //efetivamente escritos em caso de sucesso ou -1, caso contrario
 // Função para escrever dados em um arquivo no sistema de arquivos MyFS
 #define MYFS_MAX_FILES 128  // Número máximo de arquivos suportados
-typedef struct {
-    char filename[MAX_FILENAME_LENGTH + 1];
-    unsigned int inodeNumber;
-    int isOpen;
-    unsigned int readPointer;
-    unsigned int writePointer;
-} MyFSFile;
-
-typedef struct {
-    char dirname[MAX_FILENAME_LENGTH + 1];
-    unsigned int inodeNumber;
-    int isOpen;
-    unsigned int readPointer;
-} MyFSDirectory;
-
-typedef struct {
-    char magicNumber[4];
-    unsigned int blockSize;
-    MyFSFile files[MYFS_MAX_FILES];
-    MyFSDirectory directories[MYFS_MAX_FILES];
-} MyFSData;
-
-static MyFSData myFSData;
-
 
 int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
 
