@@ -64,8 +64,7 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
         inodeSave(inode);
     }
 
-    //printa o trecho de inodes criados
-    //O +1 existe porque começa no setor 0 
+    //printa o trecho de inodes criados 
     printf("\nInode criado de %u a %u \n", inodeAreaBeginSector(), (numeroInode + inodeAreaBeginSector()));
 
 	// Define o primeiro setor disponivel para criar o Inode
@@ -197,26 +196,21 @@ static MyFSData myFSData;
 int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
 
     //Verifica se possui erros 
-    if (fd <= 0 || fd > MAX_FDS || arquivos[fd - 1] == NULL) {
+    if (fd <= 0 || fd > MAX_FDS || arquivos[fd] == NULL) {
         return -1; 
     }
     
-    Arquivo *arquivo = arquivos[fd - 1];
+    Arquivo *arquivo = arquivos[fd];
     Inode *inode = arquivo->inode;
     Disk *d = arquivo->disk;
     unsigned int blocksize = arquivo->blocksize;
 
-    //Verifica se o last byte read é maior que 0
-    //Retorna ele para zero para percorrer do inicio 
-    if (arquivo->lastByteRead < 0) {
-        arquivo->lastByteRead = 0;
-    }
-
-    //define em qual setor vai ser escrito      
+    //define em qual setor vai ser escrito  
      int currentBlock = arquivo->lastByteRead / blocksize;
+    //Verifica se tá no inicio de um bloco se não tiver vai pro inicio do proximo 
      int startBlock = arquivo->lastByteRead % blocksize == 0 ? currentBlock : currentBlock + 1;
 
-    //pega o número do Inode
+    //pega o número do Inode  
     int inodeNumber = inodeGetNumber(inode);
 
     //variavel auxiliar para registrar a quantidade de bits lidos 
@@ -240,18 +234,19 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
         //Le o setor para verificar se possui alguma variável diferente de zero 
         unsigned char blockData[blocksize];
         if (diskReadSector(d, blockAddr, blockData) != 0) {
-            
             return -1;
         }
         
         for (int i = offset; i < blocksize && bytesWritten < nbytes; ++i) {
             blockData[i] = buf[bytesWritten++];
-            arquivo->lastByteRead++;
         }
         //realiza a escrita dos byttes enquanto o byte não for 
         //difente de 0 ou seja encerra caso já tenha algo escrito 
         if (diskWriteSector(d, blockAddr, blockData) != 0) {
             return -1;
+        }
+        else{
+            arquivo->lastByteRead = nbytes;
         }
     }
     
