@@ -196,11 +196,11 @@ static MyFSData myFSData;
 int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
 
     //Verifica se possui erros 
-    if (fd <= 0 || fd > MAX_FDS || arquivos[fd] == NULL) {
+    if (fd <= 0 || fd > MAX_FDS || arquivos[fd-1] == NULL) {
         return -1; 
     }
     
-    Arquivo *arquivo = arquivos[fd];
+    Arquivo *arquivo = arquivos[fd-1];
     Inode *inode = arquivo->inode;
     Disk *d = arquivo->disk;
     unsigned int blocksize = arquivo->blocksize;
