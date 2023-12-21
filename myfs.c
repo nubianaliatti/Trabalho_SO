@@ -23,6 +23,9 @@
 //Declaracoes globais
 //...
 //...
+
+int blocoLivre; 
+
 typedef struct
 {
 	int fd;
@@ -56,63 +59,54 @@ int myFSFormat (Disk *d, unsigned int blockSize) {
     //Define a quantidade de setores a serem criados inodes 
     unsigned int numeroInode = blockSize/512;  
     int offset = inodeAreaBeginSector();
-    int localInode = numeroInode + offset;
+    
+    //quantidade de setores 
+    int numBlocos = (diskGetSize(d)/512)/numeroInode;
+    printf("\ntamanho disco : %d blocos \n",numBlocos);
+
+    int espacoInode = 0;
+
+    if(numBlocos % 8 == 0){
+        espacoInode = numBlocos/8;
+    }
+    else{
+        espacoInode = 1;
+    }
+
+    printf("Inodes: %d blocos\n",espacoInode);
+
+    int freeBlocks = numBlocos - espacoInode;
+    printf("Livres: %d blocos\n",freeBlocks);
+    int aux=0;
     //Cria inodes
-    for (unsigned int i = offset; i <= localInode; ++i) {
+    for (unsigned int i = offset; i <= espacoInode + offset; ++i) {
 		// Cria inode apos o inicial
-        Inode *inode = inodeCreate(i+1, d);
-        inodeSave(inode);
-    }
-
-    //printa o trecho de inodes criados 
-    printf("\nInode criado de %u a %u \n", inodeAreaBeginSector(), (numeroInode + inodeAreaBeginSector()));
-
-	// Define o primeiro setor disponivel para criar o Inode
-    // Que consiste no BlockSize in inserido pelo usuário + os setores offset 
-    unsigned int primeiroDisponivel = inodeAreaBeginSector() + numeroInode;
-
-	// Auxiliar para contar a quantidade de blocos livres:
-    unsigned long blocosLivres = 0;
-
-    //Função para calcular  a quantidade de blocos livres 
-    //definidas pelo grupo para serem uasadas na formatação 
-    // igual a 4x a quantidade de Inodes criada 
-    int qtdeBlocos = (4*blockSize)/512;
-
-    //Variavel auxiliar para pegar a quantidade de setores a serem formatados 
-    //de acordo com a função acima
-    int rangeBlocos = qtdeBlocos + primeiroDisponivel;
-
-	// Formata os blocos da área livre
-    unsigned char formata[blockSize];
-    memset(formata, 0, sizeof(formata));
-    for (unsigned int i = primeiroDisponivel; i <= rangeBlocos; ++i) {
-		// Caso não consiga escrever no setor
-        if (diskWriteSector(d, i, formata) != 0) {
-            return -1; 
+        for (int j = 0; j < inodeNumInodesPerSector(); j++)
+        {
+            Inode *inode = inodeCreate(aux,d);
+            // inodeAddBlock(inode,i);
+            inodeSave(inode);
+            aux++;
         }
-		blocosLivres++; 
+       
     }
+    blocoLivre = espacoInode + offset + 1;
 
-	
+	// // Define o primeiro Inode após o offset como a raiz
+	// unsigned int numeroRaiz = inodeFindFreeInode(inodeAreaBeginSector(), d);
 
-	// Define o primeiro Inode após o offset como a raiz
-	unsigned int numeroRaiz = inodeFindFreeInode(inodeAreaBeginSector(), d);
-
-    // Carregar o i-node do diretório raiz
-    Inode *rootInode = inodeLoad(numeroRaiz, d);
-
-
-    // Configura o i-node como raiz
-    inodeSetFileType(rootInode, FILETYPE_DIR);
-    inodeSetFileSize(rootInode, 0);
-    inodeSetOwner(rootInode, 1);
-    inodeSetRefCount(rootInode, 1);
+    // // Carregar o i-node do diretório raiz
+    // Inode *rootInode = inodeLoad(numeroRaiz, d);
 
 
-    //printa a quantidade de blocos livres formatados
-	printf ("\nblocos livres formatados: %lu \n", blocosLivres);
-    return blocosLivres;
+    // // Configura o i-node como raiz
+    // inodeSetFileType(rootInode, FILETYPE_DIR);
+    // inodeSetFileSize(rootInode, 0);
+    // inodeSetOwner(rootInode, 1);
+    // inodeSetRefCount(rootInode, 1);
+
+
+    return freeBlocks;
 }
 //Funcao para abertura de um arquivo, a partir do caminho especificado
 //em path, no disco montado especificado em d, no modo Read/Write,
@@ -169,7 +163,10 @@ int myFSRead (int fd, char *buf, unsigned int nbytes) {
 // Função para escrever dados em um arquivo no sistema de arquivos MyFS
 #define MYFS_MAX_FILES 128  // Número máximo de arquivos suportados
 
+
 int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
+
+    
 
     //Verifica se possui erros 
     if (fd <= 0 || fd > MAX_FDS || arquivos[fd-1] == NULL) {
@@ -180,7 +177,7 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
     Inode *inode = arquivo->inode;
     Disk *d = arquivo->disk;
     unsigned int blocksize = arquivo->blocksize;
-
+    
     //define em qual setor vai ser escrito  
      int currentBlock = arquivo->lastByteRead / blocksize;
     //Verifica se tá no inicio de um bloco se não tiver vai pro inicio do proximo 
@@ -218,7 +215,7 @@ int myFSWrite(int fd, const char *buf, unsigned int nbytes) {
         }
         //realiza a escrita dos byttes enquanto o byte não for 
         //difente de 0 ou seja encerra caso já tenha algo escrito 
-        if (diskWriteSector(d, blockAddr, blockData) != 0) {
+        if (diskWriteSector(d, blocoLivre, blockData) != 0) {
             return -1;
         }
         else{
